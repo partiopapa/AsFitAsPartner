@@ -1,0 +1,249 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title></title>
+        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.css">
+        <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+        <script src="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+        <meta name="apple-mobile-web-app-capable" content="yes"> 
+        <script>
+            var state = {};
+            
+            function init_state() {
+                state = {
+                    logged_usr: "",
+                    logged_pass: "",
+                    activity_feed: [],
+                    diary_feed: [],
+                    groups: []
+                }
+            }
+            
+            init_state();
+            
+            function show_feed() {
+                $("#activity_feed").html("");
+                state.activity_feed.forEach(function(entry){
+                    $("#activity_feed").append("<li>Aktiviteetti</li>");
+                });
+            }
+            
+            function show_diary() {
+                $("#diary_feed").html("");
+                state.diary_feed.forEach(function(entry){
+                    $("#diary_feed").append("<li class='ui-li ui-li-static ui-btn-up-c'>"+entry+"</li>");
+                });
+            }
+            
+            function show_groups() {
+                $("#userlist").html("");
+                state.groups.forEach(function(){});
+            }
+            
+            var asfitaspartner = {
+                send_register: function() {
+                    jQuery.post("main.php", {
+                        action: "register",
+                        reg_usr: $("#reg_usr").val(),
+                        reg_pass: $("#reg_pass").val(),
+                        reg_phone: $("#reg_phone").val(),
+                        reg_email: $("#reg_email").val()
+                    })
+                    .done(function(data) {
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            location.replace("#frontpage");
+                            $("#reg_success").html(response.message);
+                        } else {
+                            $("#reg_error").html(response.message);
+                        }
+                    });
+                },
+                send_login: function() {
+                    jQuery.post("main.php", {
+                        action: "login",
+                        log_usr: $("#log_usr").val(),
+                        log_pass: $("#log_pass").val()
+                    })
+                    .done(function(data) {
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            state.logged_usr = response.user;
+                            state.logged_pass = $("#log_pass").val();
+                            localStorage.setItem("state", JSON.stringify(state));
+                            location.replace("#frontpage");
+                            $("#logged_usr").html(response.user);
+                        } else {
+                            $("#log_error").html(response.message);
+                        }
+                    });
+                },
+                logout: function() {
+                    localStorage.clear();
+                    init_state();
+                    $("#logged_usr").html("");
+                },
+                update_activity_feed: function() {
+                    jQuery.post("main.php", {
+                        action: "getactivityfeed",
+                        log_usr: state.logged_usr,
+                        log_pass: state.logged_pass,
+                        amount: 10
+                    })
+                    .done(function(data){
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            state.activity_feed = response.activityfeed;
+                            show_feed();
+                        } else {
+                            alert('error');
+                        }
+                    });
+                },
+                update_diary_feed: function() {
+                    jQuery.post("main.php", {
+                        action: "getdiaryfeed",
+                        log_usr: state.logged_usr,
+                        log_pass: state.logged_pass,
+                        amount: 10
+                    })
+                    .done(function(data){
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            state.diary_feed = response.diaryfeed;
+                            show_diary();
+                        } else {
+                            alert('error');
+                        }
+                    });
+                },
+                add_activity: function(){
+                    jQuery.post("main.php", {
+                        action: "newtask",
+                        log_usr: state.logged_usr,
+                        log_pass: state.logged_pass,
+                        activity_type: $("#activity_type").val(),
+                        activity_duration: $("#activity_duration").val(),
+                        activity_comment: $("#activity_comment").val()
+                    })
+                    .done(function(data){
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            location.replace("#diary");
+                        } else {
+                            alert(response.message);
+                        }
+                    });
+                },
+                new_group: function() {
+                    jQuery.post("main.php", {
+                        action: "newgroup",
+                        log_usr: state.logged_usr,
+                        log_pass: state.logged_pass,
+                        new_group_name: $("#new_group_name").val()
+                    })
+                    .done(function(data){
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            location.replace("#groups");
+                        } else {
+                            alert("error");
+                        }
+                    });
+                },
+                my_groups: function() {
+                    jQuery.post("main.php", {
+                        action: "getmygroups",
+                        log_usr: state.logged_usr,
+                        log_pass: state.logged_pass
+                    }).done(function(data){
+                        var response = jQuery.parseJSON(data);
+                        if (response.success) {
+                            state.groups = response.groups;
+                            show_groups();
+                        } else {
+                            alert("error");
+                        }
+                    });
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div data-role="page" id="frontpage">
+            <div>
+                <p class="bg-success" id="reg_success"></p>
+                <p class="bg-success" id="logged_usr"></p>
+            </div>
+            <a href="#register" data-transition="slide" class="ui-btn ui-btn-inline">Rekisteröidy</a>
+            <a href="#login" data-transition="slide" class="ui-btn ui-btn-inline">Kirjaudu sisään</a>
+            <a href="#" onclick="asfitaspartner.logout()" class="ui-btn ui-btn-inline">Kirjaudu ulos</a>
+            <a href="#diary" data-transition="slide" class="ui-btn ui-btn-inline" onclick="show_diary()">Oma päiväkirja</a>
+            <a href="#groups" data-transition="slide" class="ui-btn ui-btn-inline">Ryhmät</a>
+            <ul data-role="listview" id="activity_feed">
+            </ul>
+        </div>
+        <div data-role="page" id="register">
+            <a href="#frontpage" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <form id="reg_form" action="#">
+                <div><p class="bg-danger" id="reg_error"></p></div>
+                <input type="text" name="reg_usr" id="reg_usr" placeholder="Käyttäjätunnus" />
+                <input type="password" name="reg_pass" id="reg_pass" placeholder="Salasana" />
+                <input type="text" name="reg_phone" id="reg_phone" placeholder="Puhelinnumero" />
+                <input type="text" name="reg_email" id="reg_email" placeholder="Sähköposti" />
+                <button onclick="asfitaspartner.send_register()">Rekisteröidy</button>
+            </form>
+        </div>
+        <div data-role="page" id="login">
+            <a href="#frontpage" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <form id="log_form" action="#">
+                <div><p class="bg-danger" id="log_error"></p></div>
+                <input type="text" name="log_usr" id="log_usr" placeholder="Käyttäjätunnus" />
+                <input type="password" name="log_pass" id="log_pass" placeholder="Salasana" />
+                <button onclick="asfitaspartner.send_login()">Kirjaudu</button>
+            </form>
+        </div>
+        <div data-role="page" id="diary">
+            <a href="#frontpage" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <a href="#addactivity" data-transition="slide" class="ui-btn ui-btn-inline">Lisää merkintä</a>
+            <a href="#" onclick="asfitaspartner.update_diary_feed()">Päivitä</a>
+            <ul data-role="listview" id="diary_feed">
+            </ul>
+        </div>
+        <div data-role="page" id="addactivity">
+            <a href="#diary" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <form id="add_activity_form" action="#">
+                <input type="text" name="activity_type" id="activity_type" placeholder="Urheilulaji" />
+                <input type="text" name="activity_duration" id="activity_duration" placeholder="Käytetty aika (min)" />
+                <textarea cols="40" rows="5" name="activity_comment" id="activity_comment">Kommentti</textarea>
+                <button onclick="asfitaspartner.add_activity()">Lähetä</button>
+            </form>
+        </div>
+        <div data-role="page" id="groups">
+            <a href="#frontpage" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <a href="#newgroup" data-transition="slide" class="ui-btn ui-btn-inline">Uusi ryhmä</a>
+            <ul data-role="listview" id="userlist">
+            </ul>
+        </div>
+        <div data-role="page" id="newgroup">
+            <a href="#groups" data-transition="slide" data-direction="reverse" class="ui-btn ui-btn-inline">Takaisin</a>
+            <form id="new_group_form" action="#">
+                <input type="text" name="new_group_name" id="new_group_name" placeholder="Ryhmän nimi" />
+                <button onclick="asfitaspartner.new_group()">Luo</button>
+            </form>
+        </div>
+        <script>
+            $("#reg_form").submit(false);
+            $("#log_form").submit(false);
+            $("#add_activity_form").submit(false);
+            $("#new_group_form").submit(false);
+            var new_state = JSON.parse(localStorage.getItem("state"));
+            if (new_state !== null)
+                state = new_state;
+            $("#logged_usr").html(state.logged_usr);
+        </script>
+    </body>
+</html>
